@@ -24,7 +24,7 @@ Designed to work well with (and make up for features not found in) Avrae and oth
   - `!transactions` views recent spendings/earnings with reasons
   
 ## Admin mode commands
-Some commands work differently in admin mode (+ 1 extra command for free). For commands not listed here, simply append <username> to any 
+Some commands work differently in admin mode (+ 1 extra command for free). For commands not listed here, simply append a username param to any 
 command and parameters to execute that command as that person.
   - `!levelup <amount> <target>` specifies number of levels to level up by
   - `!spend <amount> <target> <reason>` slightly inverted syntax
