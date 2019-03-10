@@ -1,0 +1,4 @@
+module.exports = {
+	token: 'Your Discord App Token',
+	storageLocation: 'path/to/storage/directory'
+};
