@@ -17,7 +17,7 @@ module.exports = {
 		"levelup": ['levelup', 'lvl'],
 		"resetxp": ['resetxp', 'xpreset', ],
 		"addxp": ['addxp', 'xp'],
-		"party": ['party', 'people', 'levels', 'xp']
+		"party": ['party', 'people', 'levels', 'xplist']
 	},
 	earn: {
 		isAdminOnly: false,
