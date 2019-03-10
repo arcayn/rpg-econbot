@@ -9,7 +9,8 @@ Designed to work well with (and make up for features not found in) Avrae and oth
  - install it
  - make a Discord application and get its token 
  - fill in `opt.js` (remember to remove `.example`)
- - invite it to your server
+ - run the node app on your server
+ - invite the bot to your Discord chat
  - ???
  - profit
  
