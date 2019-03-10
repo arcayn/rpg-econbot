@@ -21,7 +21,7 @@ Designed to work well with (and make up for features not found in) Avrae and oth
   - `!capitalism <amount>` takes money from the communal pool, putting it in your personal balance
   - `!balance` displays the balances of party members + the communal pool
   - `!party` displays the currents **levels** and xp values of party members
-  = `!transactions` views recent spendings/earnings with reasons
+  - `!transactions` views recent spendings/earnings with reasons
   
 ## Admin mode commands
 Some commands work differently in admin mode (+ 1 extra command for free). For commands not listed here, simply append <username> to any 
