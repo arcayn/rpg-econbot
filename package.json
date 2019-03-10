@@ -1,0 +1,12 @@
+{
+  "name": "rpg-econbot",
+  "version": "0.1.1",
+  "description": "Tabletop RPG Economy management for Discord",
+  "main": "src/main.js",
+  "private": false,
+  "dependencies": {
+    "node-persist": "^3.0.0",
+    "discord.js": "^11.3.0"
+  },
+}
+
