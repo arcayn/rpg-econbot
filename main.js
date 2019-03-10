@@ -52,7 +52,7 @@ client.on('message', async (msg) => {
     await storage.setItem(person + '_xp', 0);
     await storage.setItem(person + '_level', 0);
   }
-  var admin = (person == 'not_arcane' && msg.channel.name == 'archies-funhouse') ? true : false;
+  var admin = (Params.adminUsernames.includes(person) && Params.adminChannels.includes(msg.channel.name)) ? true : false;
 
   if (wordz[0] === '!earn') {
     wordz.shift();
