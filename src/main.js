@@ -69,7 +69,7 @@ client.on('ready', () => {
 
 client.on('message', async (msg) => {
   var messageWords = msg.content.split(" ");
-  if (msg.author.bot || messageWords[0] != '!econ') { return; }
+  if (msg.author.bot || messageWords[0] != '!scriba') { return; }
   messageWords.shift();
   var sentCommand = messageWords.shift().toLowerCase();
   var person = msg.author.username;
