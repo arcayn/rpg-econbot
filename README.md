@@ -7,11 +7,17 @@ of development. The main progress will be in catching errors so it doesn't fail 
 
 Designed to work well with (and make up for features not found in) Avrae and other similar bots. To deploy on your own server: 
  - install it
- - get a Discord application token 
+ - make a Discord application and get its token 
  - fill in `opt.js` (remember to remove `.example`)
  - invite it to your server
  - ???
  - profit
+ 
+ ## Features
+  - Track XP for your party
+  - Track your party's money
+  - Auto level-up (coming soon)
+  - Track anything about your party members (coming soon)
  
  ## Commands
  Invoke the bot with `!scriba`
