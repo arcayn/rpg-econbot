@@ -6,7 +6,7 @@ Small Discord app written in node I built for use in tabletop RPG campaigns. Ver
 of development.
 
 Designed to work well with (and make up for features not found in) Avrae and other similar bots. To deploy on your own server: 
- - install it and its dependencies (package.json coming soon)
+ - install it
  - get a Discord application token 
  - fill in `opt.js` (remember to remove `.example`)
  - invite it to your server
