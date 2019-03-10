@@ -1,10 +1,12 @@
 # rpg-econbot
+[![Dependencies: Up to date](https://david-dm.org/arcayn/rpg-econbot.svg)](https://david-dm.org/arcayn/rpg-econbot) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 
 Small Discord app written in node I built for use in tabletop RPG campaigns. Very basic and janky at the moment but is in early stages
 of development.
 
 Designed to work well with (and make up for features not found in) Avrae and other similar bots. To deploy on your own server: 
- - install it and its dependencies (package.json coming soon)
+ - install it
  - get a Discord application token 
  - fill in `opt.js` (remember to remove `.example`)
  - invite it to your server
