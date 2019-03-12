@@ -1,5 +1,4 @@
 //TODO: Add 'fairshare' command
-//TODO: take the pages actions of out the comment and implement them
 
 Discord = require("discord.js");
 
