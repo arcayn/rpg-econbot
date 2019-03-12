@@ -4,7 +4,15 @@ Discord = require("discord.js");
 
 
 const LEVELS = {
-}
+	'DnD5e': {
+		values: [0, 300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000],
+		cumulative: true
+	},
+	'none': {
+		values: [0],
+		cumulative: false
+	}
+};
 
 module.exports = {
 	aliases: {
@@ -17,7 +25,7 @@ module.exports = {
 		"levelup": ['levelup', 'lvl'],
 		"resetxp": ['resetxp', 'xpreset', ],
 		"addxp": ['addxp', 'xp'],
-		"party": ['party', 'people', 'levels', 'xplist']
+		"party": ['party', 'people', 'levels', 'xp']
 	},
 	earn: {
 		isAdminOnly: false,
@@ -202,7 +210,9 @@ async function levelupCommand(storage, globalParams, params, person, isAdmin, ms
 
     var personObj = await storage.getItem(person);
 	
-	personObj.level += inc;
+	personObj.level = (personObj.level + inc < 1) ? 1 : personObj.level + inc;
+	if (personObj.level <= LEVELS[globalParams.levelling].values.length) { personObj.xp = (LEVELS[globalParams.levelling].cumulative) ? LEVELS[globalParams.levelling].values[personObj.level - 1] : 0; }
+	
     storage.setItem(person, personObj);
 	
 	var personName = (isAdmin) ? person + " is" : "You are";
@@ -220,11 +230,48 @@ async function addxpCommand(storage, globalParams, params, person, isAdmin, msg,
 
     var personObj = await storage.getItem(person);
 	
-	personObj.xp += inc;
-    storage.setItem(person, personObj);
+	var currLevel = personObj.level;
+	var newLevel;
+	if (LEVELS[globalParams.levelling].cumulative) {
+		console.log("here");
+		for (var i = 0; i < LEVELS[globalParams.levelling].values.length; i++) {
+			if (LEVELS[globalParams.levelling].values[i] < personObj.xp) {
+				currLevel = i + 1;
+			}
+			if (LEVELS[globalParams.levelling].values[i] < personObj.xp + inc) {
+				newLevel = i + 1;
+			}
+		}
+		personObj.xp = personObj.xp + inc;
+		if (currLevel != newLevel) { personObj.level = newLevel; }
+	} else {
+		var currXP = personObj.xp + inc;
+		var levelCounter = 0;
+		
+		for (var i = personObj.level; i < LEVELS[globalParams.levelling].values.length; i++) {
+			var tempXP = currXP - LEVELS[globalParams.levelling].values[i];
+			if (tempXP < 0) {
+				break;
+			}
+			currXP = tempXP;
+			levelCounter++;
+		}
+		
+		personObj.xp = currXP;
+		personObj.level = personObj.level + levelCounter;	
+	}
 	
+    storage.setItem(person, personObj);
+
 	var personName = (isAdmin) ? person + " now has" : "You now have";
-    msg.reply('Congratulations! ' + personName + ' **'+ (personObj.xp).toString() + 'xp**!');
+    var reply = 'Congratulations! ' + personName + ' **'+ (personObj.xp).toString() + 'xp**';
+	
+	if (currLevel != personObj.level) {
+		var personName = (isAdmin) ? "is" : "are";
+		reply +=  ' and ' + personName + ' level **'+ (personObj.level).toString() + '**';
+	}
+	
+	msg.reply(reply + '!');
 	return false;
 }
 

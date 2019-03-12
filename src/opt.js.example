@@ -4,5 +4,6 @@ module.exports = {
 	adminNames: ['list', 'of', 'admin', 'users'],
 	adminChannels: ['admin', 'mode', 'enabled', 'channels'],
 	verbosity: 5,
-	keptTransactions: 15
+	keptTransactions: 15,
+	levelling: 'Levelling mode, so far only DnD5e or none is supported'
 };
