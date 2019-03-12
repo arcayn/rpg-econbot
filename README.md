@@ -66,3 +66,14 @@ Some commands have specific admin mode syntax. For commands not listed here, sim
   - `levelup <amount> <target>` specifies number of levels to level up by
   - `spend <amount> <target> <reason>` slightly inverted syntax
   - `earn <amount> <target> <reason>` same as above
+  
+## Server options
+`opt.js` contains server configuration options.
+ - `token` your discord api token
+ - `storageLocation` this is the path to where the node-persist files will be stored (relative to the directory you run the app from)
+ - `adminNames` discord usernames of users who you want to have admin privs
+ - `adminChannels` channel names where admin users can use admin mode (encourages bot admin off the #general channels)
+ - `verbosity` how verbose console logging will be (see top of `main.js` for what these numbers mean)
+ - `keptTransactions` how many transactions will be held on record
+ - `levelling` which levelling table to use. `LEVELS` in `commands.js` for included ones
+ - `color` hex value of color which Scriba `RichEmbeds` will use
