@@ -38,7 +38,8 @@ Designed to work well with (and make up for features not found in) Avrae and oth
 ## Pages Commands
 Scriba's pages allow you to keep track of any numerical values of your party. General syntax is:
  - `!scriba p <pageName> <command>` where command is the command + arguments and pageName is the page to operate on
-The commands which follow this syntx are:
+
+The commands which follow this syntax are:
  - `create` creates a new page
  - `remove` removes selected page
  - `toggle <property>` toggles the value of a property for selected page. Available properties are:
@@ -54,6 +55,7 @@ The commands which follow this syntx are:
  - `pool <amount>` adds an amount from your page balance to the communal pool
  - `unpool <amount>` increases your page balance from the communal pool
  - `list` lists the page balances of your party members
+
 The one command that does not follow this syntax:
  - `!scriba p listall` lists all pages
 
