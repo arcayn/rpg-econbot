@@ -1,4 +1,4 @@
-# Scriba economy bot
+# Scriba RPG-stats bot
 [![Dependencies: Up to date](https://david-dm.org/arcayn/rpg-econbot.svg)](https://david-dm.org/arcayn/rpg-econbot) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 
