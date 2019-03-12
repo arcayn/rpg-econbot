@@ -24,6 +24,7 @@ Designed to work well with (and make up for features not found in) Avrae and oth
  Invoke the bot with `!scriba`
   - `levelup` does what is says on the tin
   - `addxp <amount>` ... gives you xp
+  - `nextlevel` prints xp until next level
   - `resetxp` resets your xp to 0
   - `earn <amount> <reason>` adds `amount` of gp to your personal balance (for a good `reason`)
   - `spend <amount> <reason>` opposite of `earn`

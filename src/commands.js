@@ -25,7 +25,8 @@ module.exports = {
 		"levelup": ['levelup', 'lvl'],
 		"resetxp": ['resetxp', 'xpreset', ],
 		"addxp": ['addxp', 'xp'],
-		"party": ['party', 'people', 'levels', 'xp']
+		"party": ['party', 'people', 'levels', 'xp'],
+		"nextlevel": ['nextlevel', 'next']
 	},
 	earn: {
 		isAdminOnly: false,
@@ -66,6 +67,10 @@ module.exports = {
 	party: {
 		isAdminOnly: false,
 		action: partyCommand
+	},
+	nextlevel: {
+		isAdminOnly: false,
+		action: nextlevelCommand
 	}
 }
 
@@ -298,5 +303,32 @@ async function partyCommand(storage, globalParams, params, person, isAdmin, msg,
        embed.addField(people[i], '**' + personObj.level.toString() + '** ' + personObj.xp.toString(), true);
     }
     msg.channel.send({embed});
+	return false;
+}
+
+async function nextlevelCommand (storage, globalParams, params, person, isAdmin, msg, protoPeople) {
+	people = protoPeople;
+	if (LEVELS[globalParams.levelling].values.length <= 1) {
+		msg.reply("No levelling system selected!");
+		return false;
+	}
+	
+	if (isAdmin) {
+		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
+	}
+	
+	var personObj = await storage.getItem(person);
+	
+	if (LEVELS[globalParams.levelling].cumulative) {
+		for (var i = 0; i < LEVELS[globalParams.levelling].values.length; i++) {
+			if (personObj.xp < LEVELS[globalParams.levelling].values[i]) {
+				msg.reply((LEVELS[globalParams.levelling].values[i] - personObj.xp).toString() + "xp until level " + (i+1).toString() + "!");
+				break;
+			}
+		}
+	} else {
+		msg.reply((LEVELS[globalParams.levelling].values[personObj.level] - personObj.xp).toString() + "xp until level " + (personObj.level + 1).toString() + "!");
+	}
+	
 	return false;
 }
