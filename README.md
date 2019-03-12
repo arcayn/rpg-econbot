@@ -6,7 +6,7 @@ Discord app written in node I built for use in tabletop RPG campaigns. A little 
 of development. The main progress will be in catching errors so it doesn't fail silently/corrupt data files.
 
 Designed to work well with (and make up for features not found in) Avrae and other similar bots. To deploy on your own server: 
- - install it
+ - clone the repo onto your server
  - make a Discord application and get its token 
  - fill in `opt.js` (remember to remove `.example`)
  - run the node app on your server
