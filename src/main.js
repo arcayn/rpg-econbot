@@ -14,17 +14,26 @@ const Priorities = {
 
 var people = [];
 var transactions = [];
+var pages = [];
 
 async function setup() {
   await storage.init({dir: Params.storageLocation});
   people = await storage.getItem('ADMIN_PEOPLE');
   communal = await storage.getItem('COMMUNAL');
   transactions = await storage.getItem('ADMIN_TRANSACTIONS');
+  pages = await storage.getItem('ADMIN_PAGES');
   if (typeof(people) == 'undefined') {
     people = [];
   }
   if (typeof(transactions) == 'undefined') {
     transactions = [];
+  }
+  if (typeof(pages) == 'undefined') {
+    pages = [];
+	await storage.setItem('ADMIN_PAGES', pages);
+  }
+  if (typeof(await storage.getItem('COMMUNAL_PAGES')) == 'undefined') {
+    await storage.setItem('COMMUNAL_PAGES', {})
   }
   if (typeof(communal) != 'number') {
     await storage.setItem('COMMUNAL', 0);
@@ -42,10 +51,17 @@ function addTrans(trans) {
 async function addNewPerson(person) {
 	people.push(person);
     storage.setItem('ADMIN_PEOPLE', people);
-    await storage.setItem(person, {'gp': 0,
+    var pObj = {'gp': 0,
 		'level': 1,
 		'xp': 0
-		});
+	};
+		
+	pages = await storage.getItem('ADMIN_PAGES');
+	for (var page in pages) {
+		pObj[page[0]] = page[1];
+	}
+	
+	await storage.setItem(person, pObj);
 }
 
 async function executeCommand(command, messageWords, person, admin, msg) {

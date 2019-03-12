@@ -17,14 +17,14 @@ Designed to work well with (and make up for features not found in) Avrae and oth
  ## Features
   - Track XP for your party
   - Track your party's money
-  - Auto level-up
-  - Track anything about your party members (coming soon)
+  - Auto levelling with custom tables
+  - Track any numerical attributes of your party
  
  ## Commands
  Invoke the bot with `!scriba`
   - `levelup` does what is says on the tin
   - `addxp <amount>` ... gives you xp
-  - `nextlevel` prints xp until next level
+  - `nextlevel`replies with xp until next level
   - `resetxp` resets your xp to 0
   - `earn <amount> <reason>` adds `amount` of gp to your personal balance (for a good `reason`)
   - `spend <amount> <reason>` opposite of `earn`
