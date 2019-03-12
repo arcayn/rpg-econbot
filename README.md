@@ -33,7 +33,30 @@ Designed to work well with (and make up for features not found in) Avrae and oth
   - `balance` displays the balances of party members + the communal pool
   - `party` displays the currents **levels** and xp values of party members
   - `transactions` views recent spendings/earnings with reasons
-  
+  - `p <command>` pages commands
+
+## Pages Commands
+Scriba's pages allow you to keep track of any numerical values of your party. General syntax is:
+ - `!scriba p <pageName> <command>` where command is the command + arguments and pageName is the page to operate on
+The commands which follow this syntx are:
+ - `create` creates a new page
+ - `remove` removes selected page
+ - `toggle <property>` toggles the value of a property for selected page. Available properties are:
+     * `protected` only editable by admins
+     * `poolable` allows for a communal pool of the resource
+     * `totalled` totals the resource when listed
+     * `transferrable` allows the resource to be transferred with `give`
+     * `negativeable` allows the value to go below 0
+ - `add <amount>` adds an amount to your page balance
+ - `sub <amount>` subtracts an amount from your page balance
+ - `set <amount>` sets your page balance to an amount
+ - `give <amount> <party member>` gives an amount from your page balance to another party member
+ - `pool <amount>` adds an amount from your page balance to the communal pool
+ - `unpool <amount>` increases your page balance from the communal pool
+ - `list` lists the page balances of your party members
+The one command that does not follow this syntax:
+ - `!scriba p listall` lists all pages
+
 ## Admin mode
 Adding a user to admins allows them to execute commands as other people and level up multiple levels at a time. You also must specify channel names where admin mode can be used in your settings file to prevent admin mode syntax from messing with normal usage.
 
