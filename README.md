@@ -2,8 +2,8 @@
 [![Dependencies: Up to date](https://david-dm.org/arcayn/rpg-econbot.svg)](https://david-dm.org/arcayn/rpg-econbot) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 
-Discord app written in node I built for use in tabletop RPG campaigns. A little unreliable at the moment but is in early stages
-of development. The main progress will be in catching errors so it doesn't fail silently/corrupt data files.
+Discord app written in node I built for use in tabletop RPG campaigns. Still InDev, any suggestions/
+found bugs welcome!
 
 Designed to work well with (and make up for features not found in) Avrae and other similar bots. To deploy on your own server: 
  - clone the repo onto your server
@@ -19,6 +19,7 @@ Designed to work well with (and make up for features not found in) Avrae and oth
   - Track your party's money
   - Auto levelling with custom tables
   - Track any numerical attributes of your party
+  - Track nonnumerical attributes of your party **(coming soon)**
  
  ## Commands
  Invoke the bot with `!scriba`
