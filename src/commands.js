@@ -27,7 +27,8 @@ module.exports = {
 		"addxp": ['addxp', 'xp'],
 		"party": ['party', 'people', 'levels', 'xp'],
 		"nextlevel": ['nextlevel', 'next'],
-		"pages": ['pages', 'p']
+		"pages": ['pages', 'p'],
+		"removePerson": ['removeperson']
 	},
 	earn: {
 		isAdminOnly: false,
@@ -76,6 +77,10 @@ module.exports = {
 	pages: {
 		isAdminOnly: false,
 		action: pagesCommand
+	},
+	removePerson: {
+		isAdminOnly: true,
+		action: removePerson
 	}
 };
 
@@ -135,6 +140,10 @@ function getPageObj(page, mode=0) {
 async function earnCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
 	var balInc = parseInt(params.shift());
+	
+	if (isNaN(balInc) || balInc <= 0)
+		return [1, 'Enter a valid positive number!'];
+	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
     var personObj = await storage.getItem(person);
 	personObj.gp = personObj.gp + balInc;
@@ -146,12 +155,16 @@ async function earnCommand(storage, globalParams, params, person, isAdmin, msg, 
 	
     storage.setItem(person, personObj);
 	
-	return person + " earned **" + (balInc).toString() + "gp** for " + reason;
+	return [0, person + " earned **" + (balInc).toString() + "gp** for " + reason];
 }
 
 async function spendCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
 	var balDec = parseInt(params.shift());
+	
+	if (isNaN(balDec) || balDec <= 0)
+		return [1, 'Enter a valid positive number!'];
+	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
     var personObj = await storage.getItem(person);
 	if (personObj.gp - balDec < 0) {
@@ -168,12 +181,16 @@ async function spendCommand(storage, globalParams, params, person, isAdmin, msg,
 	
     storage.setItem(person, personObj);
 	
-	return person + " spent **" + (balDec).toString() + "gp** on " + reason;
+	return [0, person + " spent **" + (balDec).toString() + "gp** on " + reason];
 }
 
 async function communismCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
 	var balDec = parseInt(params.shift());
+	
+	if (isNaN(balDec) || balDec <= 0)
+		return [1, 'Enter a valid positive number!'];
+	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
     var personObj = await storage.getItem(person);
 	var communalBalance = await storage.getItem('COMMUNAL')
@@ -198,6 +215,10 @@ async function communismCommand(storage, globalParams, params, person, isAdmin, 
 async function capitalismCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
 	var balInc = parseInt(params.shift());
+	
+	if (isNaN(balInc) || balInc <= 0)
+		return [1, 'Enter a valid positive number!'];
+	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
     var personObj = await storage.getItem(person);
 	var communalBalance = await storage.getItem('COMMUNAL')
@@ -255,6 +276,8 @@ async function levelupCommand(storage, globalParams, params, person, isAdmin, ms
 	var inc = 1;
 	if (isAdmin) {
 		if (params.length) { inc = parseInt(params.shift()); }
+		if (isNaN(inc))
+			return [1, 'Enter a valid number!'];
 		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
 	}
 
@@ -274,6 +297,9 @@ async function levelupCommand(storage, globalParams, params, person, isAdmin, ms
 async function addxpCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
 	var inc = parseInt(params.shift());
+	if (isNaN(inc))
+		return [1, 'Enter a valid number!'];
+	
 	if (isAdmin) {
 		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
 	}
@@ -378,22 +404,47 @@ async function nextlevelCommand (storage, globalParams, params, person, isAdmin,
 	return false;
 }
 
+async function removePerson(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
+	people = protoPeople;
+	if (params.length) 
+		var target = params.shift();
+	else
+		return [1, "Enter a user to remove!"]
+	
+	for (var i = 0; i < people.length; i++) {
+		if (people[i] == target) {
+			people.splice(i,1);
+			await storage.setItem('ADMIN_PEOPLE', people);
+			return false;
+		}
+	}
+	
+	return [1, "No user by name " + target];
+}
+
 async function pagesCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
 	pages = await storage.getItem('ADMIN_PAGES');
 	
-	var page = params.shift();
+	if (params.length)
+		var page = params.shift();
+	else
+		return [1, 'Enter a page to modify!'];
+	
 	if (page == 'listall') {
 		await listPages(page, storage, globalParams, params, person, isAdmin, msg);
 		return false;
 	}
-	var sentAction = params.shift();
+	
+	if (params.length)
+		var sentAction = params.shift();
+	else
+		return [1, 'Enter a command to execute on the page!'];
 	
 	for (var action in PAGE_ACTIONS) {
 		if (PAGE_ACTIONS.hasOwnProperty(action)) {
 			if (action == sentAction) {
-				PAGE_ACTIONS[action](page, storage, globalParams, params, person, isAdmin, msg);
-				break;
+				return PAGE_ACTIONS[action](page, storage, globalParams, params, person, isAdmin, msg);
 			}
 		}
     }
@@ -404,14 +455,18 @@ async function pagesCommand(storage, globalParams, params, person, isAdmin, msg,
 
 async function createPage(page, storage, globalParams, params, person, isAdmin, msg) {
 	if (!isAdmin) {
-		msg.reply('Only admins can create pages!');
-		return false;
+		return [1, 'Only admins can create pages'];
 	}
 	
-	var startValue = 0;
-	if (params.length) { startValue = parseInt(params.shift()); }
+	var startValue = parseInt(params.shift());
+	if (isNaN(startValue))
+		startValue = 0;
 	
-	//console.log(pages);
+	for (var i = 0; i < pages.length; i++) {
+		if (pages[i][0] == page)
+			return [1, "Page already exists"];
+	}
+	
 	pages.push([page, startValue, [false, false, false, false, false]]);
 	storage.setItem('ADMIN_PAGES', pages);
 	
@@ -426,7 +481,7 @@ async function createPage(page, storage, globalParams, params, person, isAdmin, 
 	storage.setItem('COMMUNAL_PAGES', communalObj);
 	
 	msg.reply("Page " + page + " created successfully!");
-	return true;
+	return false;
 }
 
 async function listPages(page, storage, globalParams, params, person, isAdmin, msg) {
@@ -445,8 +500,7 @@ async function listPages(page, storage, globalParams, params, person, isAdmin, m
 
 async function removePage(page, storage, globalParams, params, person, isAdmin, msg) {
 	if (!isAdmin) {
-		msg.reply('Only admins can delete pages!');
-		return false;
+		return [1, 'Only admins can delete pages!'];
 	}
 	
 	pages.splice(getPageObj(page, 1), 1);
@@ -459,13 +513,12 @@ async function removePage(page, storage, globalParams, params, person, isAdmin, 
 	}
 	
 	msg.reply("Page " + page + " successfully removed");
-	return true;
+	return false;
 }
 
 async function togglePage(page, storage, globalParams, params, person, isAdmin, msg) {
 	if (!isAdmin) {
-		msg.reply('Only admins can manage pages!');
-		return false;
+		return [1, 'Only admins can manage pages!'];
 	}
 	
 	var pageObj;
@@ -477,28 +530,30 @@ async function togglePage(page, storage, globalParams, params, person, isAdmin, 
 	}
 	
 	if (pageObj == undefined) {
-		msg.reply("Page doesn't exist");
-		return false;
+		return [1, "Page doesn't exist"];
 	}
 	
 	var property = params.shift();
+	
+	if (!(property in PAGE_ATTRIBUTES))
+		return [1, "Attribute doesn't exist"];
 
 	pageObj[2][PAGE_ATTRIBUTES[property]] = (pageObj[2][PAGE_ATTRIBUTES[property]]) ? false : true;
 	storage.setItem('ADMIN_PAGES', pages);
 	
 	msg.reply("Set attribute **" + property + "** to **" + pageObj[2][PAGE_ATTRIBUTES[property]].toString() + "**");
 
-	return true;
+	return false;
 }
 
 async function addPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
 	if (getPageObj(page)[2][0] && !isAdmin) {
-		msg.reply('Only admins can modify this page!');
-		return false;
+		return [1, 'Only admins can modify this page!'];
 	}
 	
 	var balInc = parseInt(params.shift());
-	balInc = (balInc < 0) ? 0 : balInc;
+	if (isNaN(balInc) || balInc <= 0)
+		return [1, 'Enter a valid positive number!'];
 	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
     var personObj = await storage.getItem(person);
@@ -510,25 +565,24 @@ async function addPageVariable(page, storage, globalParams, params, person, isAd
 
     storage.setItem(person, personObj);
 	
-	return true;
+	return false;
 }
 
 async function subPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
 	var pageObj = getPageObj(page);
 	if (pageObj[2][0] && !isAdmin) {
-		msg.reply('Only admins can modify this page!');
-		return false;
+		return [1, 'Only admins can modify this page!'];
 	}
 	
 	var balDec = parseInt(params.shift());
-	balDec = (balDec < 0) ? 0 : balDec;
+	if (isNaN(balDec) || balDec <= 0)
+		return [1, 'Enter a valid positive number!'];
 	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
     var personObj = await storage.getItem(person);
 	
 	if (personObj[page] - balDec < 0 && !pageObj[2][4]) {
-		msg.reply(page + ' value not high enough!');
-		return false;
+		return [1, page + ' value not high enough!'];
 	}
 	personObj[page] = personObj[page] - balDec;
 	
@@ -538,17 +592,18 @@ async function subPageVariable(page, storage, globalParams, params, person, isAd
 
     storage.setItem(person, personObj);
 	
-	return true;
+	return false;
 }
 
 async function setPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
 	var pageObj = getPageObj(page);
 	if (pageObj[2][0] && !isAdmin) {
-		msg.reply('Only admins can modify this page!');
-		return false;
+		return [1, 'Only admins can modify this page!'];
 	}
 	
 	var balSet = parseInt(params.shift());
+	if (isNaN(balSet))
+		return [1, 'Enter a valid number!'];
 	
 	balSet = (balSet < 0 && !pageObj[2][4]) ? 0 : balSet;
 	
@@ -562,7 +617,7 @@ async function setPageVariable(page, storage, globalParams, params, person, isAd
 
     storage.setItem(person, personObj);
 	
-	return true;
+	return false;
 }
 
 async function listPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
@@ -592,24 +647,31 @@ async function listPageVariable(page, storage, globalParams, params, person, isA
 async function givePageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
 	var pageObj = getPageObj(page);
 	if (pageObj[2][0] && !isAdmin) {
-		msg.reply('Only admins can modify this page!');
-		return false;
+		return [1, 'Only admins can modify this page!'];
 	}
 	if (!pageObj[2][3]) {
-		msg.reply('Cannot transfer this page value!');
-		return false;
+		return [1, 'Cannot transfer this page value!'];
 	}
 	
 	var balDec = parseInt(params.shift());
-	var target = params.shift();
+	if (isNaN(balDec) || balDec <= 0)
+		return [1, 'Enter a valid positive number!'];
+	
+	if (params.length)
+		var target = params.shift();
+	else
+		return [1, 'Enter a give target'];
+	
+	if (!people.includes(target))
+		return [1, "No user by name " + target];
+	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
 	
     var personObj = await storage.getItem(person);
 	var targetObj = await storage.getItem(target);
 	
 	if (personObj[page] - balDec < 0 && !pageObj[2][4]) {
-		msg.reply(page + ' value not high enough!');
-		return false;
+		return [1, page + ' value not high enough!'];
 	}
 	
 	personObj[page] = personObj[page] - balDec;
@@ -622,29 +684,29 @@ async function givePageVariable(page, storage, globalParams, params, person, isA
     storage.setItem(person, personObj);
 	storage.setItem(target, targetObj);
 	
-	return true;
+	return false;
 }
 
 async function poolPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
 	var pageObj = getPageObj(page);
 	if (pageObj[2][0] && !isAdmin) {
-		msg.reply('Only admins can modify this page!');
-		return false;
+		return [1, 'Only admins can modify this page!'];
 	}
 	if (!pageObj[2][1]) {
-		msg.reply('Cannot pool this page value!');
-		return false;
+		return [1, 'Cannot pool this page value!'];
 	}
 	
 	var balDec = parseInt(params.shift());
+	if (isNaN(balDec) || balDec <= 0)
+		return [1, 'Enter a valid positive number!'];
+
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
 	
     var personObj = await storage.getItem(person);
 	var targetObj = await storage.getItem('COMMUNAL_PAGES');
 	
 	if (personObj[page] - balDec < 0 && !pageObj[2][4]) {
-		msg.reply(page + ' value not high enough!');
-		return false;
+		return [1, page + ' value not high enough!'];
 	}
 	
 	personObj[page] = personObj[page] - balDec;
@@ -657,29 +719,29 @@ async function poolPageVariable(page, storage, globalParams, params, person, isA
     storage.setItem(person, personObj);
 	storage.setItem('COMMUNAL_PAGES', targetObj);
 	
-	return true;
+	return false;
 }
 
 async function unpoolPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
 	var pageObj = getPageObj(page);
 	if (pageObj[2][0] && !isAdmin) {
-		msg.reply('Only admins can modify this page!');
-		return false;
+		return [1, 'Only admins can modify this page!'];
 	}
 	if (!pageObj[2][1]) {
-		msg.reply('Cannot pool this page value!');
-		return false;
+		return [1, 'Cannot pool this page value!'];
 	}
 	
 	var balInc = parseInt(params.shift());
+	if (isNaN(balInc) || balInc <= 0)
+		return [1, 'Enter a valid positive number!'];
+	
     if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
 	
     var personObj = await storage.getItem(person);
 	var targetObj = await storage.getItem('COMMUNAL_PAGES');
 	
 	if (targetObj[page] - balInc < 0 && !pageObj[2][4]) {
-		msg.reply(page + ' value not high enough!');
-		return false;
+		return [1, page + ' value not high enough!'];
 	}
 	
 	personObj[page] = personObj[page] + balInc;
@@ -692,5 +754,5 @@ async function unpoolPageVariable(page, storage, globalParams, params, person, i
     storage.setItem(person, personObj);
 	storage.setItem('COMMUNAL_PAGES', targetObj);
 	
-	return true;
+	return false;
 }

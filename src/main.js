@@ -64,11 +64,20 @@ async function addNewPerson(person) {
 	await storage.setItem(person, pObj);
 }
 
+async function giveUserError(msg, error) {
+	msg.reply('**ERROR**: `' + error + '`');
+}
+
 async function executeCommand(command, messageWords, person, admin, msg) {
 	if (!Commands[command].adminOnly || admin) {
 		var retVal = await Commands[command].action(storage, Params, messageWords, person, admin, msg, people, transactions);
 		if (retVal) {
-			addTrans(retVal);
+			if (retVal[0] == 0) {
+				addTrans(retVal[1]);
+			}
+			else {
+				giveUserError(msg, retVal[1]);
+			}
 		}
 	}
 }
@@ -94,15 +103,18 @@ client.on('message', async (msg) => {
     await addNewPerson(person);
   }
   sendConsoleMsg("Recieved command: " + sentCommand, Priorities.LOG);
+  
   var admin = (Params.adminNames.includes(person) && Params.adminChannels.includes(msg.channel.name)) ? true : false;
   for (var command in Commands.aliases) {
     if (Commands.aliases.hasOwnProperty(command)) {
         if (Commands.aliases[command].includes(sentCommand)) {
 			await executeCommand(command, messageWords, person, admin, msg);
-			break;
+			return;
 		}
     }
   }
+  
+  giveUserError(msg, "No command by name " + sentCommand);
 });
 
 client.login(Params.token);
