@@ -1,0 +1,6 @@
+- Move Levels into different file
+- Add fairshare command
+- Add more levelling tables
+- Turn massive readme into wiki
+- Make it work across servers (oops)
+- Add moar options
