@@ -3,6 +3,7 @@ const storage = require('node-persist');
 const Params = require('./opt.js');
 const Commands = require('./commands.js');
 const client = new Discord.Client();
+client.on('error', console.error);
 
 const Priorities = {
 	'ERROR': 5,

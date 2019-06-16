@@ -436,6 +436,9 @@ async function pagesCommand(storage, globalParams, params, person, isAdmin, msg,
 		return false;
 	}
 	
+	if (!pages.includes(page))
+		return [1, 'Page ' + page + 'does not exist!'];
+	
 	if (params.length)
 		var sentAction = params.shift();
 	else
