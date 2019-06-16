@@ -2,18 +2,6 @@
 
 Discord = require("discord.js");
 
-
-const LEVELS = {
-	'DnD5e': {
-		values: [0, 300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000],
-		cumulative: true
-	},
-	'none': {
-		values: [0],
-		cumulative: false
-	}
-};
-
 module.exports = {
 	aliases: {
 		"earn": ['earn', 'gain', 'obtain', 'recieve'],
@@ -284,7 +272,7 @@ async function levelupCommand(storage, globalParams, params, person, isAdmin, ms
     var personObj = await storage.getItem(person);
 	
 	personObj.level = (personObj.level + inc < 1) ? 1 : personObj.level + inc;
-	if (personObj.level <= LEVELS[globalParams.levelling].values.length) { personObj.xp = (LEVELS[globalParams.levelling].cumulative) ? LEVELS[globalParams.levelling].values[personObj.level - 1] : 0; }
+	if (personObj.level <= globalParams.Levels[globalParams.levelling].values.length) { personObj.xp = (globalParams.Levels[globalParams.levelling].cumulative) ? globalParams.Levels[globalParams.levelling].values[personObj.level - 1] : 0; }
 	
     storage.setItem(person, personObj);
 	
@@ -308,13 +296,13 @@ async function addxpCommand(storage, globalParams, params, person, isAdmin, msg,
 	
 	var currLevel = personObj.level;
 	var newLevel;
-	if (LEVELS[globalParams.levelling].cumulative) {
+	if (globalParams.Levels[globalParams.levelling].cumulative) {
 		console.log("here");
-		for (var i = 0; i < LEVELS[globalParams.levelling].values.length; i++) {
-			if (LEVELS[globalParams.levelling].values[i] < personObj.xp) {
+		for (var i = 0; i < globalParams.Levels[globalParams.levelling].values.length; i++) {
+			if (globalParams.Levels[globalParams.levelling].values[i] < personObj.xp) {
 				currLevel = i + 1;
 			}
-			if (LEVELS[globalParams.levelling].values[i] < personObj.xp + inc) {
+			if (globalParams.Levels[globalParams.levelling].values[i] < personObj.xp + inc) {
 				newLevel = i + 1;
 			}
 		}
@@ -324,8 +312,8 @@ async function addxpCommand(storage, globalParams, params, person, isAdmin, msg,
 		var currXP = personObj.xp + inc;
 		var levelCounter = 0;
 		
-		for (var i = personObj.level; i < LEVELS[globalParams.levelling].values.length; i++) {
-			var tempXP = currXP - LEVELS[globalParams.levelling].values[i];
+		for (var i = personObj.level; i < globalParams.Levels[globalParams.levelling].values.length; i++) {
+			var tempXP = currXP - globalParams.Levels[globalParams.levelling].values[i];
 			if (tempXP < 0) {
 				break;
 			}
@@ -379,7 +367,7 @@ async function partyCommand(storage, globalParams, params, person, isAdmin, msg,
 
 async function nextlevelCommand (storage, globalParams, params, person, isAdmin, msg, protoPeople) {
 	people = protoPeople;
-	if (LEVELS[globalParams.levelling].values.length <= 1) {
+	if (globalParams.Levels[globalParams.levelling].values.length <= 1) {
 		msg.reply("No levelling system selected!");
 		return false;
 	}
@@ -390,15 +378,15 @@ async function nextlevelCommand (storage, globalParams, params, person, isAdmin,
 	
 	var personObj = await storage.getItem(person);
 	
-	if (LEVELS[globalParams.levelling].cumulative) {
-		for (var i = 0; i < LEVELS[globalParams.levelling].values.length; i++) {
-			if (personObj.xp < LEVELS[globalParams.levelling].values[i]) {
-				msg.reply((LEVELS[globalParams.levelling].values[i] - personObj.xp).toString() + "xp until level " + (i+1).toString() + "!");
+	if (globalParams.Levels[globalParams.levelling].cumulative) {
+		for (var i = 0; i < globalParams.Levels[globalParams.levelling].values.length; i++) {
+			if (personObj.xp < globalParams.Levels[globalParams.levelling].values[i]) {
+				msg.reply((globalParams.Levels[globalParams.levelling].values[i] - personObj.xp).toString() + "xp until level " + (i+1).toString() + "!");
 				break;
 			}
 		}
 	} else {
-		msg.reply((LEVELS[globalParams.levelling].values[personObj.level] - personObj.xp).toString() + "xp until level " + (personObj.level + 1).toString() + "!");
+		msg.reply((globalParams.Levels[globalParams.levelling].values[personObj.level] - personObj.xp).toString() + "xp until level " + (personObj.level + 1).toString() + "!");
 	}
 	
 	return false;

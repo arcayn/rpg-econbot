@@ -1,9 +1,12 @@
 const Discord = require('discord.js');
 const storage = require('node-persist');
-const Params = require('./opt.js');
+var Params = require('./opt.js');
+const Levels = require('./levels.js');
 const Commands = require('./commands.js');
 const client = new Discord.Client();
 client.on('error', console.error);
+
+Params.Levels = Levels;
 
 const Priorities = {
 	'ERROR': 5,
