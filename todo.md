@@ -1,6 +1,5 @@
 - Add fairshare command
 - Turn massive readme into wiki
-- Make it work across servers (oops)
 - Add moar options
 - Add better admin mode stability
 - Add better stability for server options

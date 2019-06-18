@@ -16,73 +16,114 @@ const Priorities = {
 	'LOG': 1
 }
 
-var people = [];
-var transactions = [];
-var pages = [];
+var masterData;
 
 async function setup() {
+  masterData = {};
   await storage.init({dir: Params.storageLocation});
-  people = await storage.getItem('ADMIN_PEOPLE');
-  communal = await storage.getItem('COMMUNAL');
-  transactions = await storage.getItem('ADMIN_TRANSACTIONS');
-  pages = await storage.getItem('ADMIN_PAGES');
-  if (typeof(people) == 'undefined') {
-    people = [];
+  
+  masterData['SERVERS'] = await storage.getItem('SERVER_LIST');
+  if (typeof(masterData['SERVERS']) == 'undefined')
+	  masterData['SERVERS'] = [];
+  
+  let servers = masterData['SERVERS'];
+  //console.log(servers); 
+
+  for (var i = 0; i < servers.length; i++) {
+	  let server = servers[i];
+	  //console.log(server);
+	  let data = {};
+	  data['people'] = await storage.getItem(server + ':PEOPLE_LIST');
+	  data['communal'] = await storage.getItem(server + ':COMMUNAL');
+	  data['transactions'] = await storage.getItem(server + ':TRANSACTIONS');
+	  data['pages'] = await storage.getItem(server + ':PAGE_LIST');
+	  data['person_data'] = await storage.getItem(server + ':PEOPLE');
+	  data['page_data'] = await storage.getItem(server + ':PAGES');
+	  
+	  if (typeof(data['people']) == 'undefined') {
+		data['people'] = [];
+	  }
+	  if (typeof(data['transactions']) == 'undefined') {
+		data['transactions'] = [];
+	  }
+	  if (typeof(data['pages']) == 'undefined') {
+		data['pages'] = [];
+		await storage.setItem(server + ':PAGE_LIST', []);
+	  }
+	  if (typeof(data['page_data']) == 'undefined') {
+		data['page_data'] = {};
+	  }
+	  if (typeof(data['person_data']) == 'undefined') {
+		data['person_data'] = {};
+	  }
+	  if (typeof(data['communal']) != 'number') {
+		await storage.setItem(server + ':COMMUNAL', 0);
+		data['communal'] = 0;
+	  }
+	  //console.log(data.person_data);
+	  masterData[server] = data;
   }
-  if (typeof(transactions) == 'undefined') {
-    transactions = [];
-  }
-  if (typeof(pages) == 'undefined') {
-    pages = [];
-	await storage.setItem('ADMIN_PAGES', pages);
-  }
-  if (typeof(await storage.getItem('COMMUNAL_PAGES')) == 'undefined') {
-    await storage.setItem('COMMUNAL_PAGES', {})
-  }
-  if (typeof(communal) != 'number') {
-    await storage.setItem('COMMUNAL', 0);
-  }
+  //console.log(masterData);
 }
 
-function addTrans(trans) {
-  transactions.push(trans);
-  if (transactions.length > Params.keptTransactions) {
-    transactions.shift();
-  }
-  storage.setItem("ADMIN_TRANSACTIONS", transactions);
+function updateStorage(val, key, server) {
+	storage.setItem(server + ':' + key, val);
 }
 
-async function addNewPerson(person) {
-	people.push(person);
-    storage.setItem('ADMIN_PEOPLE', people);
+function updateServerData(server) {
+	let datapoints = [
+	['people', 'PEOPLE_LIST'],
+	['communal', 'COMMUNAL'],
+	['transactions', 'TRANSACTIONS'],
+	['pages', 'PAGE_LIST'],
+	['person_data', 'PEOPLE'],
+	['page_data', 'PAGES']
+	];
+	
+	for (var i = 0; i < datapoints.length; i++) {
+		let datum = datapoints[i];
+		updateStorage(masterData[server][datum[0]], datum[1], server); 
+	}
+}
+
+
+
+async function addNewPerson(person, server) {
+	masterData[server].people.push(person);
+	updateStorage(masterData[server].people, 'PEOPLE_LIST', server);
     var pObj = {'gp': 0,
 		'level': 1,
 		'xp': 0
 	};
 		
-	pages = await storage.getItem('ADMIN_PAGES');
-	for (var page in pages) {
-		pObj[page[0]] = page[1];
-	}
-	
-	await storage.setItem(person, pObj);
+	pages = await storage.getItem(server + ':PAGE_LIST');
+		for (var i = 0; i < masterData[server].pages.length; i++) {
+			let page = masterData[server].page_data[masterData[server].pages[i]];
+			pObj[masterData[server].pages[i]] = page[0];
+		}
+	masterData[server].person_data[person] = pObj;
+	updateStorage(masterData[server].person_data, 'PEOPLE', server);
 }
 
 async function giveUserError(msg, error) {
 	msg.reply('**ERROR**: `' + error + '`');
 }
 
-async function executeCommand(command, messageWords, person, admin, msg) {
-	if (!Commands[command].adminOnly || admin) {
-		var retVal = await Commands[command].action(storage, Params, messageWords, person, admin, msg, people, transactions);
-		if (retVal) {
-			if (retVal[0] == 0) {
-				addTrans(retVal[1]);
-			}
-			else {
-				giveUserError(msg, retVal[1]);
+async function executeCommand(command, messageWords, person, admin, msg, server) {
+	if (!Commands[command].isAdminOnly || admin) {
+		var retVal = await Commands[command].action(masterData[server], Params, messageWords, person, admin, msg);
+		if (retVal[0] == 0) {
+			masterData[server] = retVal[1];
+			if (retVal[2]) {
+				//console.log('here'); 
+				updateServerData(server); 
 			}
 		}
+                 else {
+                   giveUserError(msg, retVal[1]);
+		}
+	} else {
+		giveUserError(msg, 'This command requires admin!');
 	}
 }
 
@@ -101,10 +142,18 @@ client.on('message', async (msg) => {
   if (msg.author.bot || messageWords[0] != '!scriba') { return; }
   messageWords.shift();
   var sentCommand = messageWords.shift().toLowerCase();
+  var server = msg.guild.id;
   var person = msg.author.username;
+  //console.log(masterData);
+  if (!masterData['SERVERS'].includes(server)) {
+	  masterData['SERVERS'].push(server);
+	  await storage.setItem('SERVER_LIST', masterData['SERVERS']);
+	  masterData = {};
+	  await setup();
+  }
   
-  if (!people.includes(person)) {
-    await addNewPerson(person);
+  if (!masterData[server].people.includes(person)) {
+    await addNewPerson(person, server);
   }
   sendConsoleMsg("Recieved command: " + sentCommand, Priorities.LOG);
   
@@ -112,7 +161,7 @@ client.on('message', async (msg) => {
   for (var command in Commands.aliases) {
     if (Commands.aliases.hasOwnProperty(command)) {
         if (Commands.aliases[command].includes(sentCommand)) {
-			await executeCommand(command, messageWords, person, admin, msg);
+			await executeCommand(command, messageWords, person, admin, msg, server);
 			return;
 		}
     }

@@ -11,8 +11,8 @@ module.exports = {
 		"balance": ['balance', 'bal', 'balances', 'bals'],
 		"transactions": ['trans', 'log', 'transactions'],
 		"levelup": ['levelup', 'lvl'],
-		"resetxp": ['resetxp', 'xpreset', ],
-		"addxp": ['addxp', 'xp'],
+		"resetxp": ['resetxp', 'xpreset'],
+		"addxp": ['addxp', 'xp', 'xpadd'],
 		"party": ['party', 'people', 'levels', 'xp'],
 		"nextlevel": ['nextlevel', 'next'],
 		"pages": ['pages', 'p'],
@@ -72,8 +72,13 @@ module.exports = {
 	}
 };
 
-var people = [];
-var pages = [];
+function addTrans(trans, data, keptTransactions) {
+  data.transactions.push(trans);
+  if (data.transactions.length > keptTransactions) {
+    data.transactions.shift();
+  }
+  return data;
+}
 
 const PAGE_ACTIONS = {
 	'create': createPage,
@@ -97,43 +102,36 @@ const PAGE_ATTRIBUTES = {
 	'negativeable': 4
 };
 
-async function checkTarget(person, storage) {
-	if (!people.includes(person)) {
-		people.push(person);
-		storage.setItem('ADMIN_PEOPLE', people);
+async function checkTarget(person, data) {
+	if (!data.people.includes(person)) {
+		data.people.push(person);
 		
 		var pObj = {'gp': 0,
 			'level': 1,
 			'xp': 0
 		};
 		
-		pages = await storage.getItem('ADMIN_PAGES');
-		for (var page in pages) {
-			pObj[page[0]] = page[1];
+		for (var i = 0; i < data.pages.length; i++) {
+			let page = data.page_data[data.pages[i]];
+			pObj[data.pages[i]] = page[0];
 		}
-		
-		await storage.setItem(person, pObj);
+		data.person_data[person] = pObj;
 	}
+	return data;
 }
 
-function getPageObj(page, mode=0) {
-	for (var i = 0; i < pages.length; i++) {
-		if (pages[i][0] == page) {
-			return (mode == 0) ? pages[i] : i;
-		}
-	}
-	return false;
+function getPageObj(page, data) {
+	return data.page_data[page];
 }
 
-async function earnCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function earnCommand(data, globalParams, params, person, isAdmin, msg) {
 	var balInc = parseInt(params.shift());
 	
 	if (isNaN(balInc) || balInc <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+    let personObj = data.person_data[person];
 	personObj.gp = personObj.gp + balInc;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
@@ -141,23 +139,21 @@ async function earnCommand(storage, globalParams, params, person, isAdmin, msg, 
 	msg.reply(personName + ' balance is now at: **'+ (personObj.gp).toString() + 'gp**');
 	var reason = (params.length) ? params.join(" ") : "no good reason";
 	
-    storage.setItem(person, personObj);
 	
-	return [0, person + " earned **" + (balInc).toString() + "gp** for " + reason];
+	data = addTrans(person + " earned **" + (balInc).toString() + "gp** for " + reason, data, globalParams.keptTransactions);
+	return [0, data, true];
 }
 
-async function spendCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function spendCommand(data, globalParams, params, person, isAdmin, msg) {
 	var balDec = parseInt(params.shift());
 	
 	if (isNaN(balDec) || balDec <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+    let personObj = data.person_data[person];
 	if (personObj.gp - balDec < 0) {
-		msg.reply('**Come back when you get some money buddy!**');
-		return false;
+		return [1, 'come back when you get some money buddy!'];
 	}
 	
 	personObj.gp = personObj.gp - balDec;
@@ -167,137 +163,122 @@ async function spendCommand(storage, globalParams, params, person, isAdmin, msg,
 	msg.reply(personName + ' balance is now at: **'+ (personObj.gp).toString() + 'gp**');
 	var reason = (params.length) ? params.join(" ") : "nothing in particular";
 	
-    storage.setItem(person, personObj);
-	
-	return [0, person + " spent **" + (balDec).toString() + "gp** on " + reason];
+    data = addTrans(person + " spent **" + (balDec).toString() + "gp** on " + reason, data, globalParams.keptTransactions);
+	return [0, data, true];
 }
 
-async function communismCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function communismCommand(data, globalParams, params, person, isAdmin, msg) {
 	var balDec = parseInt(params.shift());
 	
 	if (isNaN(balDec) || balDec <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
-	var communalBalance = await storage.getItem('COMMUNAL')
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+    let personObj = data.person_data[person];
+	var communalBalance = data.communal;
 	
-	if (personObj.gp - balDec < 0) {
-		msg.reply('**Come back when you get some money buddy!**');
-		return false;
-	}
+	if (personObj.gp - balDec < 0)
+		return [1, 'Come back when you get some money buddy!'];
 	
 	personObj.gp = personObj.gp - balDec;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
-	
 	msg.reply(personName + ' balance is now at: **'+ (personObj.gp).toString() + 'gp**, there is **' + (communalBalance + balDec).toString() + 'gp** in the communal pool');
+	data.communal = communalBalance + balDec;
 	
-    storage.setItem(person, personObj);
-	storage.setItem('COMMUNAL', communalBalance + balDec);
+	data = addTrans(person + " pooled **" + (balDec).toString() + "** gp.", data, globalParams.keptTransactions);
 	
-	return false;
+	return [0, data, true];
 }
 
-async function capitalismCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function capitalismCommand(data, globalParams, params, person, isAdmin, msg) {
 	var balInc = parseInt(params.shift());
 	
 	if (isNaN(balInc) || balInc <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
-	var communalBalance = await storage.getItem('COMMUNAL')
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+    let personObj = data.person_data[person];
+	var communalBalance = data.communal;
 	
-	if (communalBalance - balInc < 0) {
-		msg.reply('**Can\'t take that much!**');
-		return false;
-	}
+	if (communalBalance - balInc < 0)
+		return [1, 'Can\'t take that much!'];
 	
 	personObj.gp = personObj.gp + balInc;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
 	msg.reply(personName + ' balance is now at: **'+ (personObj.gp).toString() + 'gp**, there is **' + (communalBalance - balInc).toString() + 'gp** in the communal pool');
+	data.communal = communalBalance - balInc;
 	
-    storage.setItem(person, personObj);
-	storage.setItem('COMMUNAL', communalBalance - balInc);
+	data = addTrans(person + " unpooled **" + (balInc).toString() + "** gp.", data, globalParams.keptTransactions);
 	
-	return false;
+    return [0, data, true];
 }
 
-async function balanceCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function balanceCommand(data, globalParams, params, person, isAdmin, msg) {
     var embed = new Discord.RichEmbed().setTitle("Current Balances:").setColor(globalParams.color);
 	
-    for (var i = 0; i < people.length; i++) {
-       var personObj = await storage.getItem(people[i]);
-       embed.addField(people[i], personObj.gp.toString(), true);
+    for (var i = 0; i < data.people.length; i++) {
+       var personObj = data.person_data[data.people[i]];
+       embed.addField(data.people[i], personObj.gp.toString(), true);
     }
 	
-    var communalBal = await storage.getItem('COMMUNAL');
+    var communalBal = data.communal;
     embed.addField('***Communal Pool***', communalBal.toString(), true);
     msg.channel.send({embed});
 	
-	return false;
+	return [0, data, false];
 }
 
-async function transactionsCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople, transactions) {
-	people = protoPeople;
+async function transactionsCommand(data, globalParams, params, person, isAdmin, msg) {
     var embed = new Discord.RichEmbed().setTitle("Recent transactions:").setColor(globalParams.color);
     var text = "";
 	
-    for (var i = 0; i < transactions.length; i++) {
-       text += "\n" + transactions[i];
+    for (var i = 0; i < data.transactions.length; i++) {
+       text += "\n" + data.transactions[i];
     }
 	
     embed.setDescription(text);
     msg.channel.send({embed});
 	
-	return false;
+	return [0, data, false];
 }
   
-async function levelupCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function levelupCommand(data, globalParams, params, person, isAdmin, msg) {
 	var inc = 1;
 	if (isAdmin) {
 		if (params.length) { inc = parseInt(params.shift()); }
 		if (isNaN(inc))
 			return [1, 'Enter a valid number!'];
-		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
+		if (params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	}
 
-    var personObj = await storage.getItem(person);
+    let personObj = data.person_data[person];
 	
 	personObj.level = (personObj.level + inc < 1) ? 1 : personObj.level + inc;
 	if (personObj.level <= globalParams.Levels[globalParams.levelling].values.length) { personObj.xp = (globalParams.Levels[globalParams.levelling].cumulative) ? globalParams.Levels[globalParams.levelling].values[personObj.level - 1] : 0; }
 	
-    storage.setItem(person, personObj);
-	
 	var personName = (isAdmin) ? person + " is" : "You are";
+    msg.reply('congratulations! ' + personName + ' now level **'+ (personObj.level).toString() + '**!');
 	
-    msg.reply('Congratulations! ' + personName + ' now level **'+ (personObj.level).toString() + '**!');
-	return false;
+	return [0, data, true];
 }
 
-async function addxpCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function addxpCommand(data, globalParams, params, person, isAdmin, msg) {
 	var inc = parseInt(params.shift());
 	if (isNaN(inc))
 		return [1, 'Enter a valid number!'];
 	
 	if (isAdmin) {
-		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
+		if (params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	}
 
-    var personObj = await storage.getItem(person);
+    let personObj = data.person_data[person];
 	
 	var currLevel = personObj.level;
 	var newLevel;
 	if (globalParams.Levels[globalParams.levelling].cumulative) {
-		console.log("here");
 		for (var i = 0; i < globalParams.Levels[globalParams.levelling].values.length; i++) {
 			if (globalParams.Levels[globalParams.levelling].values[i] < personObj.xp) {
 				currLevel = i + 1;
@@ -324,8 +305,6 @@ async function addxpCommand(storage, globalParams, params, person, isAdmin, msg,
 		personObj.xp = currXP;
 		personObj.level = personObj.level + levelCounter;	
 	}
-	
-    storage.setItem(person, personObj);
 
 	var personName = (isAdmin) ? person + " now has" : "You now have";
     var reply = 'Congratulations! ' + personName + ' **'+ (personObj.xp).toString() + 'xp**';
@@ -336,47 +315,50 @@ async function addxpCommand(storage, globalParams, params, person, isAdmin, msg,
 	}
 	
 	msg.reply(reply + '!');
-	return false;
+	return [0, data, true];
 }
 
-async function resetxpCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function resetxpCommand(data, globalParams, params, person, isAdmin, msg) {
 	if (isAdmin) {
-		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
+		if (params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	}
 
-    var personObj = await storage.getItem(person);
+    let personObj = data.person_data[person];
 	
-	personObj.xp = 0;
-    storage.setItem(person, personObj);
-    msg.reply('Reset xp to 0');
-	return false;
+	if (globalParams.Levels[globalParams.levelling].cumulative)
+		personObj.xp = globalParams.Levels[globalParams.levelling].values[personObj.level - 1];
+	else
+		personObj.xp = 0;
+    msg.reply('reset xp to ' + personObj.xp);
+	return [0, data, true];
 }
 
-async function partyCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function partyCommand(data, globalParams, params, person, isAdmin, msg) {
 	var embed = new Discord.RichEmbed().setTitle("Current Levels:").setColor(globalParams.color);;
 	
-    for (var i = 0; i < people.length; i++) {
-       var personObj = await storage.getItem(people[i]);
-       embed.addField(people[i], '**' + personObj.level.toString() + '** ' + personObj.xp.toString(), true);
+    for (var i = 0; i < data.people.length; i++) {
+       let personObj = data.person_data[data.people[i]];
+       embed.addField(data.people[i], '**' + personObj.level.toString() + '** ' + personObj.xp.toString(), true);
     }
     msg.channel.send({embed});
-	return false;
+	return [0, data, false];
 }
 
-async function nextlevelCommand (storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function nextlevelCommand(data, globalParams, params, person, isAdmin, msg) {
 	if (globalParams.Levels[globalParams.levelling].values.length <= 1) {
-		msg.reply("No levelling system selected!");
-		return false;
+		return [1, 'No levelling system selected!'];
 	}
 	
 	if (isAdmin) {
-		if (params.length) { person = params.shift(); await checkTarget(person, storage); }
+		if (params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	}
 	
-	var personObj = await storage.getItem(person);
+	let personObj = data.person_data[person];
+	
+	if (personObj.level >= globalParams.Levels[globalParams.levelling].values.length) {
+		msg.reply('already at max level!');
+		return [0, data, false];
+	}
 	
 	if (globalParams.Levels[globalParams.levelling].cumulative) {
 		for (var i = 0; i < globalParams.Levels[globalParams.levelling].values.length; i++) {
@@ -389,30 +371,29 @@ async function nextlevelCommand (storage, globalParams, params, person, isAdmin,
 		msg.reply((globalParams.Levels[globalParams.levelling].values[personObj.level] - personObj.xp).toString() + "xp until level " + (personObj.level + 1).toString() + "!");
 	}
 	
-	return false;
+	return [0, data, false];
 }
 
-async function removePerson(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
+async function removePerson(data, globalParams, params, person, isAdmin, msg) {
 	if (params.length) 
 		var target = params.shift();
 	else
-		return [1, "Enter a user to remove!"]
+		return [1, "Enter a user to remove!"];
 	
-	for (var i = 0; i < people.length; i++) {
-		if (people[i] == target) {
-			people.splice(i,1);
-			await storage.setItem('ADMIN_PEOPLE', people);
-			return false;
+	for (var i = 0; i < data.people.length; i++) {
+		if (data.people[i] == target) {
+			data.people.splice(i,1);
+			delete data.person_data[target];
+			msg.reply('person **' + target + '** removed successfully');
+			return [0, data, true];
 		}
 	}
 	
 	return [1, "No user by name " + target];
 }
 
-async function pagesCommand(storage, globalParams, params, person, isAdmin, msg, protoPeople) {
-	people = protoPeople;
-	pages = await storage.getItem('ADMIN_PAGES');
+async function pagesCommand(data, globalParams, params, person, isAdmin, msg) {
+	let pages = data.pages;
 	
 	if (params.length)
 		var page = params.shift();
@@ -420,31 +401,30 @@ async function pagesCommand(storage, globalParams, params, person, isAdmin, msg,
 		return [1, 'Enter a page to modify!'];
 	
 	if (page == 'listall') {
-		await listPages(page, storage, globalParams, params, person, isAdmin, msg);
-		return false;
+		await listPages(page, data, globalParams, params, person, isAdmin, msg);
+		return [0, data, false];
 	}
-	
-	if (!pages.includes(page))
-		return [1, 'Page ' + page + 'does not exist!'];
 	
 	if (params.length)
 		var sentAction = params.shift();
 	else
 		return [1, 'Enter a command to execute on the page!'];
-	
+
+        if (!pages.includes(page) && sentAction != 'create')
+                return [1, 'Page ' + page + ' does not exist!'];
 	for (var action in PAGE_ACTIONS) {
 		if (PAGE_ACTIONS.hasOwnProperty(action)) {
 			if (action == sentAction) {
-				return PAGE_ACTIONS[action](page, storage, globalParams, params, person, isAdmin, msg);
+				return PAGE_ACTIONS[action](page, data, globalParams, params, person, isAdmin, msg);
 			}
 		}
     }
 	
-	return false;
+	return [1, 'Page command ' + sentAction + ' does not exist'];
 }
 
 
-async function createPage(page, storage, globalParams, params, person, isAdmin, msg) {
+async function createPage(page, data, globalParams, params, person, isAdmin, msg) {
 	if (!isAdmin) {
 		return [1, 'Only admins can create pages'];
 	}
@@ -453,76 +433,68 @@ async function createPage(page, storage, globalParams, params, person, isAdmin, 
 	if (isNaN(startValue))
 		startValue = 0;
 	
-	for (var i = 0; i < pages.length; i++) {
+	for (var i = 0; i < data.pages.length; i++) {
 		if (pages[i][0] == page)
 			return [1, "Page already exists"];
 	}
 	
-	pages.push([page, startValue, [false, false, false, false, false]]);
-	storage.setItem('ADMIN_PAGES', pages);
-	
-	for (var i = 0; i < people.length; i++) {
-		var personObj = await storage.getItem(people[i]);
+	data.page_data[page] = [startValue, 0, [false, false, false, false, false]];
+	data.pages.push(page);
+
+	for (var i = 0; i < data.people.length; i++) {
+		let prson = data.people[i];
+		let personObj = data.person_data[prson];
 		personObj[page] = startValue;
-		storage.setItem(people[i], personObj);
 	}
 	
-	var communalObj = await storage.getItem('COMMUNAL_PAGES');
-	communalObj[page] = startValue;
-	storage.setItem('COMMUNAL_PAGES', communalObj);
-	
-	msg.reply("Page " + page + " created successfully!");
-	return false;
+	msg.reply("page **" + page + "** created successfully!");
+	return [0, data, true];
 }
 
-async function listPages(page, storage, globalParams, params, person, isAdmin, msg) {
+async function listPages(page, data, globalParams, params, person, isAdmin, msg) {
 	var embed = new Discord.RichEmbed().setTitle("All pages:").setColor(globalParams.color);
     var text = "";
 	
-    for (var i = 0; i < pages.length; i++) {
-       text += "\n" + pages[i][0];
+    for (var i = 0; i < data.pages.length; i++) {
+       text += "\n" + data.pages[i];
     }
 	
     embed.setDescription(text);
     msg.channel.send({embed});
 	
-	return false;
+	return [0, data, false];
 }
 
-async function removePage(page, storage, globalParams, params, person, isAdmin, msg) {
+async function removePage(page, data, globalParams, params, person, isAdmin, msg) {
 	if (!isAdmin) {
 		return [1, 'Only admins can delete pages!'];
 	}
-	
-	pages.splice(getPageObj(page, 1), 1);
-	storage.setItem('ADMIN_PAGES', pages);
-	
-	for (var i = 0; i < people.length; i++) {
-		var personObj = await storage.getItem(people[i]);
-		delete personObj[page];
-		storage.setItem(people[i], personObj);
-	}
-	
-	msg.reply("Page " + page + " successfully removed");
-	return false;
-}
 
-async function togglePage(page, storage, globalParams, params, person, isAdmin, msg) {
-	if (!isAdmin) {
-		return [1, 'Only admins can manage pages!'];
+	delete data.page_data[page];
+	
+	for (var i = 0; i < data.people.length; i++) {
+		let prson = data.people[i];
+		var personObj = data.person_data[prson];
+		delete personObj[page];
 	}
 	
-	var pageObj;
-	for (var i = 0; i < pages.length; i++) {
-		if (pages[i][0] == page) {
-			pageObj = pages[i];
+	for (var i = 0; i < data.pages.length; i++) {
+		if (data.pages[i] == target) {
+			data.pages.splice(i,1);
 			break;
 		}
 	}
 	
-	if (pageObj == undefined) {
-		return [1, "Page doesn't exist"];
+	msg.reply("page **" + page + "** successfully removed");
+	return [0, data, true];
+}
+
+async function togglePage(page, data, globalParams, params, person, isAdmin, msg) {
+	if (!isAdmin) {
+		return [1, 'Only admins can manage pages!'];
 	}
+	
+	var pageObj = data.page_data[page];
 	
 	var property = params.shift();
 	
@@ -530,15 +502,14 @@ async function togglePage(page, storage, globalParams, params, person, isAdmin, 
 		return [1, "Attribute doesn't exist"];
 
 	pageObj[2][PAGE_ATTRIBUTES[property]] = (pageObj[2][PAGE_ATTRIBUTES[property]]) ? false : true;
-	storage.setItem('ADMIN_PAGES', pages);
 	
-	msg.reply("Set attribute **" + property + "** to **" + pageObj[2][PAGE_ATTRIBUTES[property]].toString() + "**");
+	msg.reply("set attribute **" + property + "** to **" + pageObj[2][PAGE_ATTRIBUTES[property]].toString() + "**");
 
-	return false;
+	return [0, data, true];
 }
 
-async function addPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
-	if (getPageObj(page)[2][0] && !isAdmin) {
+async function addPageVariable(page, data, globalParams, params, person, isAdmin, msg) {
+	if (data.page_data[page][2][0] && !isAdmin) {
 		return [1, 'Only admins can modify this page!'];
 	}
 	
@@ -546,21 +517,20 @@ async function addPageVariable(page, storage, globalParams, params, person, isAd
 	if (isNaN(balInc) || balInc <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+	
+    var personObj = data.person_data[person];
 	personObj[page] = personObj[page] + balInc;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
 	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**');
-
-    storage.setItem(person, personObj);
 	
-	return false;
+	return [0, data, true];
 }
 
-async function subPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
-	var pageObj = getPageObj(page);
+async function subPageVariable(page, data, globalParams, params, person, isAdmin, msg) {
+	var pageObj = data.page_data[page];
 	if (pageObj[2][0] && !isAdmin) {
 		return [1, 'Only admins can modify this page!'];
 	}
@@ -569,8 +539,8 @@ async function subPageVariable(page, storage, globalParams, params, person, isAd
 	if (isNaN(balDec) || balDec <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+    var personObj = data.person_data[person];
 	
 	if (personObj[page] - balDec < 0 && !pageObj[2][4]) {
 		return [1, page + ' value not high enough!'];
@@ -580,14 +550,12 @@ async function subPageVariable(page, storage, globalParams, params, person, isAd
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
 	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**');
-
-    storage.setItem(person, personObj);
 	
-	return false;
+	return [0, data, true];
 }
 
-async function setPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
-	var pageObj = getPageObj(page);
+async function setPageVariable(page, data, globalParams, params, person, isAdmin, msg) {
+	var pageObj = data.page_data[page];
 	if (pageObj[2][0] && !isAdmin) {
 		return [1, 'Only admins can modify this page!'];
 	}
@@ -598,45 +566,43 @@ async function setPageVariable(page, storage, globalParams, params, person, isAd
 	
 	balSet = (balSet < 0 && !pageObj[2][4]) ? 0 : balSet;
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
-    var personObj = await storage.getItem(person);
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
+    var personObj = data.person_data[person];
 	personObj[page] = balSet;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
 	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**');
-
-    storage.setItem(person, personObj);
 	
-	return false;
+	return [0, data, true];
 }
 
-async function listPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
+async function listPageVariable(page, data, globalParams, params, person, isAdmin, msg) {
     var embed = new Discord.RichEmbed().setTitle("Current values of " + page + ":").setColor(globalParams.color);
 	
 	var total = 0;
-    for (var i = 0; i < people.length; i++) {
-       var personObj = await storage.getItem(people[i]);
+    for (var i = 0; i < data.people.length; i++) {
+       var personObj = data.person_data[data.people[i]];
 	   total += personObj[page];
-       embed.addField(people[i], personObj[page].toString(), true);
+       embed.addField(data.people[i], personObj[page].toString(), true);
     }
 	
-	var pageObj = getPageObj(page);
+	var pageObj = data.page_data[page];
 	if (pageObj[2][1]) {
-		var communalObj = await storage.getItem('COMMUNAL_PAGES');
-		total += communalObj[page];
-		embed.addField('***Communal Pool***', communalObj[page].toString(), true);
+		var communal = pageObj[1];
+		total += communal;
+		embed.addField('***Communal Pool***', communal.toString(), true);
 	}
 	if (pageObj[2][2]) {
 		embed.addField('***Party Total***', total.toString(), true);
 	}
 		
     msg.channel.send({embed});	
-	return false;
+	return [0, data, false];
 }
 
-async function givePageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
-	var pageObj = getPageObj(page);
+async function givePageVariable(page, data, globalParams, params, person, isAdmin, msg) {
+	var pageObj = data.page_data[page];
 	if (pageObj[2][0] && !isAdmin) {
 		return [1, 'Only admins can modify this page!'];
 	}
@@ -653,13 +619,13 @@ async function givePageVariable(page, storage, globalParams, params, person, isA
 	else
 		return [1, 'Enter a give target'];
 	
-	if (!people.includes(target))
+	if (!data.people.includes(target))
 		return [1, "No user by name " + target];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	
-    var personObj = await storage.getItem(person);
-	var targetObj = await storage.getItem(target);
+    var personObj = data.person_data[person];
+	var targetObj = data.person_data[target];
 	
 	if (personObj[page] - balDec < 0 && !pageObj[2][4]) {
 		return [1, page + ' value not high enough!'];
@@ -671,15 +637,12 @@ async function givePageVariable(page, storage, globalParams, params, person, isA
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
 	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**, ' + target + "'s is now: **"+ (targetObj[page]).toString() + '**');
-
-    storage.setItem(person, personObj);
-	storage.setItem(target, targetObj);
 	
-	return false;
+	return [0, data, true];
 }
 
-async function poolPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
-	var pageObj = getPageObj(page);
+async function poolPageVariable(page, data, globalParams, params, person, isAdmin, msg) {
+	var pageObj = data.page_data[page];
 	if (pageObj[2][0] && !isAdmin) {
 		return [1, 'Only admins can modify this page!'];
 	}
@@ -691,30 +654,26 @@ async function poolPageVariable(page, storage, globalParams, params, person, isA
 	if (isNaN(balDec) || balDec <= 0)
 		return [1, 'Enter a valid positive number!'];
 
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	
-    var personObj = await storage.getItem(person);
-	var targetObj = await storage.getItem('COMMUNAL_PAGES');
+    var personObj = data.person_data[person];
 	
 	if (personObj[page] - balDec < 0 && !pageObj[2][4]) {
 		return [1, page + ' value not high enough!'];
 	}
 	
 	personObj[page] = personObj[page] - balDec;
-	targetObj[page] = targetObj[page] + balDec;
+	pageObj[1] = pageObj[1] + balDec;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
-	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**, the communal pool\'s is now: **'+ (targetObj[page]).toString() + '**');
-
-    storage.setItem(person, personObj);
-	storage.setItem('COMMUNAL_PAGES', targetObj);
+	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**, the communal pool\'s is now: **'+ (pageObj[1]).toString() + '**');
 	
-	return false;
+	return [0, data, true];
 }
 
-async function unpoolPageVariable(page, storage, globalParams, params, person, isAdmin, msg) {
-	var pageObj = getPageObj(page);
+async function unpoolPageVariable(page, data, globalParams, params, person, isAdmin, msg) {
+	var pageObj = data.page_data[page];
 	if (pageObj[2][0] && !isAdmin) {
 		return [1, 'Only admins can modify this page!'];
 	}
@@ -726,24 +685,20 @@ async function unpoolPageVariable(page, storage, globalParams, params, person, i
 	if (isNaN(balInc) || balInc <= 0)
 		return [1, 'Enter a valid positive number!'];
 	
-    if (isAdmin && params.length) { person = params.shift(); await checkTarget(person, storage); }
+    if (isAdmin && params.length) { person = params.shift(); data = await checkTarget(person, data); }
 	
-    var personObj = await storage.getItem(person);
-	var targetObj = await storage.getItem('COMMUNAL_PAGES');
+    var personObj = data.person_data[person];
 	
-	if (targetObj[page] - balInc < 0 && !pageObj[2][4]) {
+	if (pageObj[1] - balInc < 0 && !pageObj[2][4]) {
 		return [1, page + ' value not high enough!'];
 	}
 	
 	personObj[page] = personObj[page] + balInc;
-	targetObj[page] = targetObj[page] - balInc;
+	pageObj[1] = pageObj[1] - balInc;
 	
 	var personName = (isAdmin) ? person + "'s" : "Your";
 	
-	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**, the communal pool\'s is now: **'+ (targetObj[page]).toString() + '**');
-
-    storage.setItem(person, personObj);
-	storage.setItem('COMMUNAL_PAGES', targetObj);
+	msg.reply(personName + ' ' + page + ' value is now at: **'+ (personObj[page]).toString() + '**, the communal pool\'s is now: **'+ (pageObj[1]).toString() + '**');
 	
-	return false;
+	return [0, data, true];
 }
